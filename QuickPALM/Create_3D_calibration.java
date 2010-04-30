@@ -141,10 +141,19 @@ public class Create_3D_calibration implements PlugIn
 		int start = (pmax<pmin)?pmax:pmin;
 		int stop = (pmax<pmin)?pmin:pmax;
 		
-		mean_wmh 	 = java.util.Arrays.copyOfRange(mean_wmh, start, stop);
-		cal_mean_wmh = java.util.Arrays.copyOfRange(cal_mean_wmh, start, stop);
-		zpos		 = java.util.Arrays.copyOfRange(zpos, start, stop);
-		
+		//mean_wmh 	 = java.util.Arrays.copyOfRange(mean_wmh, start, stop);
+		//cal_mean_wmh = java.util.Arrays.copyOfRange(cal_mean_wmh, start, stop);
+		//zpos		 = java.util.Arrays.copyOfRange(zpos, start, stop);
+		double [] tmp_mean_wmh     = new double [stop-start+1];
+		double [] tmp_cal_mean_wmh = new double [stop-start+1];
+		double [] tmp_zpos         = new double [stop-start+1];
+		System.arraycopy(mean_wmh, start, tmp_mean_wmh, 0, stop-start+1);
+		System.arraycopy(cal_mean_wmh, start, tmp_cal_mean_wmh, 0, stop-start+1);
+		System.arraycopy(zpos, start, tmp_zpos, 0, stop-start+1);
+		mean_wmh = tmp_mean_wmh;
+		cal_mean_wmh = tmp_cal_mean_wmh;
+		zpos = tmp_zpos;
+	
 		Plot plot = new Plot("Calibration Values", "Z-position (nm)", "PSF Width minus Height (px)", zpos, cal_mean_wmh);
 		
 		float a, b, c, f;
@@ -158,13 +167,12 @@ public class Create_3D_calibration implements PlugIn
 			a = (f<1)?(1-f):0;
 			b = (f<1)?f/2:(2-f)/2;
 			c = (f<1)?0:(f-1);
-			//ij.IJ.log(f+" "+a+" "+b+" "+c);
-			//a = rand.nextFloat();
-			//b = rand.nextFloat();
-			//c = rand.nextFloat();
 			color = new java.awt.Color(a, b, c);
 			plot.setColor(color);
-			plot.addPoints(zpos, java.util.Arrays.copyOfRange(wmh[r], start, stop), Plot.CROSS);
+			//plot.addPoints(zpos, java.util.Arrays.copyOfRange(wmh[r], start, stop), Plot.CROSS);
+			double [] tmp = new double[stop-start+1];
+			System.arraycopy(wmh[r], start, tmp, 0, stop-start+1);
+			plot.addPoints(zpos, tmp, Plot.CROSS);
 		}
 		
 		plot.setLineWidth(2);

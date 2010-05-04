@@ -60,10 +60,7 @@ class MyFunctions
 		//double y1 = cal3d_z[n-1];
 		//double y2 = cal3d_z[n+1];
 		
-		//y = y1 + [(y2 - y1) / (x2 - x1)]á(x - x1),
 		return y1 + ((y2 - y1) / (x2 - x1))*(wmh - x1);
-		//return cal3d_z[n]+((cal3d_z[n+1]-cal3d_z[n])/(cal3d_wmh[n+1]-cal3d_wmh[n]))*(wmh-cal3d_wmh[n]);
-		//return cal3d_z[n];
 	}
 	
 	ImagePlus getNextImage(MyDialogs dg, int frame)
@@ -146,16 +143,10 @@ class MyFunctions
 				}
 			}
 			
-		ImageProcessor spip=ip.duplicate();
-		ImageProcessor lpip=ip.duplicate();
-		//gblur.blur(spip, dg.fwhm/2);
+		ImageProcessor spip=ip.duplicate(); // short-pass version of ip
+		ImageProcessor lpip=ip.duplicate(); // low-pass version of ip
 		gblur.blur(spip, 0.5);
 		gblur.blur(lpip, dg.fwhm*2);
-
-		//gblur.blur(spip, 0.5);
-		//spip = ip;
-		//gblur.blur(lpip, dg.fwhm*10);
-
 				
 		// build new frequency gatted image		
 		for (i=0;i<width;i++)
@@ -171,7 +162,7 @@ class MyFunctions
 		int xend = xmin+7;
 		if (xend>width) xend = width;
 		int ystart = ymin-6;
-		if (ystart<0) xstart=0;
+		if (ystart<0) ystart=0;
 		int yend = ymin+7;
 		if (yend>height) yend = height;
 		
@@ -198,8 +189,7 @@ class MyFunctions
 		int notok_nparticles = 0;
 		int last_ok_nparticles = 0;
 		int smartcounter = 0;
-		//int [] okOrNot = new int [2];
-		//IJ.log("--new image-- snrthrsh="+snrthresh);
+
 		for (int n=0;n<=dg.maxpart;n++)
 		{
 			maxs = getMaxPositions(ip);
@@ -219,7 +209,6 @@ class MyFunctions
 			}
 		}
 		IJ.log("'OK'/'Not OK' Particles= "+ok_nparticles+"/"+notok_nparticles);
-		//return okOrNot;
 	}
 	
 	boolean getParticle(ImageProcessor ip, boolean [][] mask, int [] maxs, MyDialogs dg, ResultsTable ptable, int nframe)
@@ -323,7 +312,6 @@ class MyFunctions
 						xrstd+=sxdev;
 						xrsum+=s;
 					}
-					//if ((j-ym)<0)
 					if (sydev<0)
 					{
 						ylstd+=-sydev;
@@ -369,7 +357,6 @@ class MyFunctions
 		
 		// symmetricity
 		double xsym = 1-Math.abs((xlstd-xrstd)/(xlstd+xrstd));
-		//double ysym = 1-Math.abs((ylstd-xrstd)/(ylstd+xrstd));
 		double ysym = 1-Math.abs((ylstd-yrstd)/(ylstd+yrstd));
 		double sym = (xsym<ysym)?xsym:ysym;
 		

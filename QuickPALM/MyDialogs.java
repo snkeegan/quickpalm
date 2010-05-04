@@ -252,28 +252,28 @@ class MyDialogs
 		gd.addChoice("View mode", view_modes, prefs.get("QuickPALM.view_mode", view_modes[1]));
 		//gd.addNumericField("Allow image saturation (%)", prefs.get("QuickPALM.saturation", 50), 0);
 		
-		gd.addCheckbox("\tSimulate sub-difraction spot (gaussian convolution - only 2D)", prefs.get("QuickPALM.viewer_doConvolve", true));
-		//gd.addCheckbox("\tMake 3D stack", prefs.get("QuickPALM.viewer_do3d", false));
-		//gd.addCheckbox("\tMake movie", prefs.get("QuickPALM.viewer_doMovie", false));
-		gd.addCheckbox("\tMake 3D stack", false);
-		gd.addCheckbox("\tMake movie", false);
-		//gd.addCheckbox("\tSave only and don't show", prefs.get("QuickPALM.viewer_doSave", false));
+		gd.addCheckbox("Simulate sub-difraction spot (gaussian convolution - only 2D)", prefs.get("QuickPALM.viewer_doConvolve", true));
+		//gd.addCheckbox("Make 3D stack", prefs.get("QuickPALM.viewer_do3d", false));
+		//gd.addCheckbox("Make movie", prefs.get("QuickPALM.viewer_doMovie", false));
+		gd.addCheckbox("Make 3D stack", false);
+		gd.addCheckbox("Make movie", false);
+		//gd.addCheckbox("Save only and don't show", prefs.get("QuickPALM.viewer_doSave", false));
 		gd.addMessage("\n");
 		
 		// -----------------------------------------
-		gd.addMessage("\t-- Simulate sub-difraction spot settings (used only if selected) --");
+		gd.addMessage("-- Simulate sub-difraction spot settings (used only if selected) --");
 		gd.addNumericField("FWHM of the spot", prefs.get("QuickPALM.viewer_fwhm", 30), 2);
 		gd.addMessage("\n");
 		
 		// -----------------------------------------
-		gd.addMessage("\t-- Make 3D stack settings (used only if selected) --");
+		gd.addMessage("-- Make 3D stack settings (used only if selected) --");
 		gd.addNumericField("Z-spacing between slices (nm)", prefs.get("QuickPALM.viewer_zstep", 50), 2);
 		gd.addNumericField("Merge particle Z-position above (nm - 0 for full Z range)", prefs.get("QuickPALM.viewer_mergeabove", 0), 2);
 		gd.addNumericField("Merge particle Z-position bellow (nm - 0 for full Z range)",prefs.get("QuickPALM.viewer_mergebellow", 0), 2);
 		gd.addMessage("\n");
 		
 		// -----------------------------------------
-		gd.addMessage("\t-- Make movie settings (used only if selected) --");
+		gd.addMessage("-- Make movie settings (used only if selected) --");
 		gd.addNumericField("Make a reconstruction in every N frames", prefs.get("QuickPALM.viewer_update", 10), 0);
 		gd.addNumericField("Accumulate N neighboring frames for each reconstruction\n(set to 0 to accumulate all the preceding frames)", prefs.get("QuickPALM.viewer_accumulate", 100), 0);
 	
@@ -329,14 +329,14 @@ class MyDialogs
 		gd.addNumericField("Minimum SNR", prefs.get("QuickPALM.snr", 5), 2);
 		gd.addNumericField("Maximum FWHM (in px)", prefs.get("QuickPALM.fwhm", 4), 0);
 		gd.addNumericField("Image plane pixel size (nm)", prefs.get("QuickPALM.pixelsize", 106), 2);
-		gd.addCheckbox("\tSmart SNR", prefs.get("QuickPALM.smartsnr", true));
-		gd.addCheckbox("\t3D PALM (astigmatism) - will require calibration file", prefs.get("QuickPALM.is3d", false));
-		gd.addCheckbox("\tOnline rendering", prefs.get("QuickPALM.view", true));
-		gd.addCheckbox("\tAttach to running acquisition", prefs.get("QuickPALM.attach", false));
-		gd.addCheckbox("\tStream particle info directly into file", prefs.get("QuickPALM.stream", true));
+		gd.addCheckbox("Smart SNR", prefs.get("QuickPALM.smartsnr", true));
+		gd.addCheckbox("3D PALM (astigmatism) - will require calibration file", prefs.get("QuickPALM.is3d", false));
+		gd.addCheckbox("Online rendering", prefs.get("QuickPALM.view", true));
+		gd.addCheckbox("Attach to running acquisition", prefs.get("QuickPALM.attach", false));
+		gd.addCheckbox("Stream particle info directly into file", prefs.get("QuickPALM.stream", true));
 		gd.addMessage("\n");
 		// -----------------------------------------
-		gd.addMessage("\t-- Online rendering settings (used only if selected) --");
+		gd.addMessage("-- Online rendering settings (used only if selected) --");
 		gd.addMessage("\n");
 		gd.addNumericField("Pixel size of rendered image (nm)", 30, 2);
 		gd.addNumericField("Accumulate last (0 to accumulate all frames)", 0, 0);
@@ -344,14 +344,14 @@ class MyDialogs
 		//gd.addNumericField("Allow color saturation (%)", 50, 0);
 		gd.addMessage("\n");
 		// -----------------------------------------
-		gd.addMessage("\t-- Attach to running acquisition settings (used only if selected) --");
+		gd.addMessage("-- Attach to running acquisition settings (used only if selected) --");
 		gd.addMessage("\n");
 		gd.addStringField("_Image name pattern (NN...NN represents the numerical change)", prefs.get("QuickPALM.pattern", "imgNNNNNNNNN.tif"), 20);
 		gd.addNumericField("Start NN...NN with", 0, 0);
 		gd.addNumericField("In acquisition max. wait time for new image (ms)", 50, 0);
 		gd.addMessage("\n");
 		// -----------------------------------------
-		gd.addMessage("\t-- Advanced settings (don't normally need to be changed) --");
+		gd.addMessage("-- Advanced settings (don't normally need to be changed) --");
 		gd.addMessage("\n");
 		gd.addNumericField("_Minimum symmetry (%)", prefs.get("QuickPALM.symmetry", 50), 0);
 		gd.addNumericField("Local threshold (% maximum intensity)", prefs.get("QuickPALM.lthreshold", 20), 0);

@@ -56,12 +56,12 @@ public class ParticleSaver
         
         if (counter%1000==0)
         {
+			lock.lock();
             this.tsaver = new ThreadedSaver();
-            lock.lock();
             this.tsaver.mysetup(this.fw, this.wlock, msg);
             msg="";
+			this.tsaver.start();
             lock.unlock();
-            this.tsaver.start();
         }
         this.counter++;
     }
@@ -82,7 +82,6 @@ public class ParticleSaver
 class ThreadedSaver extends Thread
 {
 	private ReconstructionViewer viewer;
-	//private java.util.concurrent.locks.Lock lock = new java.util.concurrent.locks.ReentrantLock();
     FileWriter fw;
     java.util.concurrent.locks.Lock wlock;
     java.lang.String msg;

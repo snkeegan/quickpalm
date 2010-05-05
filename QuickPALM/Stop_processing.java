@@ -4,6 +4,7 @@ import ij.IJ;
 import ij.gui.GenericDialog;
 import ij.plugin.PlugIn;
 
+/** This plugin halts the Analyse Particles threads. */
 public class Stop_processing implements PlugIn {
 
 	public void run(String arg) {
@@ -49,5 +50,4 @@ public class Stop_processing implements PlugIn {
 		//threads[threadIndex].stop();
 		if (foundThread!=-1) threads[foundThread].stop();
 	}
-
 }

@@ -11,6 +11,10 @@ import ij.measure.CurveFitter.*;
 import java.awt.*;
 import java.util.*;
 
+/** This plugin creates a 3D calibration table by observing the width and height
+ * change of beads over depth (caused by astigmatism). This table can be then be
+ * used to localize particles in 3D space.
+*/
 public class Create_3D_calibration implements PlugIn 
 {
 	ImagePlus imp;
@@ -24,7 +28,6 @@ public class Create_3D_calibration implements PlugIn
 	
 	public boolean setup(String arg) 
 	{
-        
 		if (! dg.checkBeads() || ! dg.beadCalibration3d())
 			return false;
 		imp = dg.imp;
@@ -40,11 +43,11 @@ public class Create_3D_calibration implements PlugIn
 		// Start processing
 		ij.IJ.run(imp, "Select None", "");
 
-		double [][] sgnl  = new double[dg.nrois][dg.nslices];
-		double [][] xstd = new double[dg.nrois][dg.nslices];
-		double [][] ystd = new double[dg.nrois][dg.nslices];
-		double [][] wmh = new double[dg.nrois][dg.nslices];
-		double [] mean_wmh = new double[dg.nslices];
+		double [][] sgnl  = new double[dg.nrois][dg.nslices]; // signal array per ROI and slices
+		double [][] xstd = new double[dg.nrois][dg.nslices];  // x stddev per ROI and slices
+		double [][] ystd = new double[dg.nrois][dg.nslices];  // y stddev per ROI and slices
+		double [][] wmh = new double[dg.nrois][dg.nslices];   // width-minus-height per ROI and slices
+		double [] mean_wmh = new double[dg.nslices];          // mean width-minus-heigh for all ROIs
 		
 		int index_z0 = 0;
 		double sSum = 0;
@@ -55,7 +58,20 @@ public class Create_3D_calibration implements PlugIn
 			imp.setSlice(s);
 			ip=imp.getProcessor().duplicate();
 			
-			f.sizeGating(ip, 0.5, dg.fwhm*2);
+			// build new frequency gatted image	
+			ImageProcessor lpip = ip.duplicate();
+			f.gblur.blur(ip, 0.5);
+			f.gblur.blur(lpip, dg.fwhm*2);
+			int v;
+			for (int i=0;i<ip.getWidth();i++)
+			{
+				for (int j=0;j<ip.getHeight(); j++)
+				{
+					v=ip.get(i, j)-lpip.get(i, j);
+					if (v>=0) ip.set(i, j, v);
+					else ip.set(i, j, 0);
+				}
+			}
 			
 			sSum = 0;
 			for (int r=0;r<dg.rois.length;r++)
@@ -72,7 +88,10 @@ public class Create_3D_calibration implements PlugIn
 			mean_wmh[s-1] /= sSum;
 		}		
 		
-		// get the bias for each particle
+		// get the bias for each particle - particles are not on the same focal
+		// plane since there is always a small tilt of the coverslip
+		// we then need to recenter the measurements of each particle against
+		// the average position of the group
 		double [] bias = new double [dg.rois.length];
 		for (int r=0;r<dg.rois.length;r++)
 		{
@@ -83,7 +102,6 @@ public class Create_3D_calibration implements PlugIn
 				sSum+= sgnl[r][s-1];
 			}
 			bias[r]/=sSum;
-			//ij.IJ.log(""+bias[r]);
 		}
 		
 		// realign each ROI
@@ -91,7 +109,7 @@ public class Create_3D_calibration implements PlugIn
 			for (int s=1;s<=dg.nslices;s++)
 				wmh[r][s-1]-=bias[r];
 		
-		//	averaging
+		//	averaging - recalculate the "mean" model particle
 		for (int s=1;s<=dg.nslices;s++)
 		{
 			mean_wmh[s-1]=0;
@@ -141,9 +159,6 @@ public class Create_3D_calibration implements PlugIn
 		int start = (pmax<pmin)?pmax:pmin;
 		int stop = (pmax<pmin)?pmin:pmax;
 		
-		//mean_wmh 	 = java.util.Arrays.copyOfRange(mean_wmh, start, stop);
-		//cal_mean_wmh = java.util.Arrays.copyOfRange(cal_mean_wmh, start, stop);
-		//zpos		 = java.util.Arrays.copyOfRange(zpos, start, stop);
 		double [] tmp_mean_wmh     = new double [stop-start+1];
 		double [] tmp_cal_mean_wmh = new double [stop-start+1];
 		double [] tmp_zpos         = new double [stop-start+1];
@@ -157,7 +172,7 @@ public class Create_3D_calibration implements PlugIn
 		Plot plot = new Plot("Calibration Values", "Z-position (nm)", "PSF Width minus Height (px)", zpos, cal_mean_wmh);
 		
 		float a, b, c, f;
-		java.awt.Color color;// = new java.awt.Color(0.1,0.1,0.1);
+		java.awt.Color color;
 		Random rand = new Random(0);
 		
 		plot.setLineWidth(1);
@@ -169,7 +184,6 @@ public class Create_3D_calibration implements PlugIn
 			c = (f<1)?0:(f-1);
 			color = new java.awt.Color(a, b, c);
 			plot.setColor(color);
-			//plot.addPoints(zpos, java.util.Arrays.copyOfRange(wmh[r], start, stop), Plot.CROSS);
 			double [] tmp = new double[stop-start+1];
 			System.arraycopy(wmh[r], start, tmp, 0, stop-start+1);
 			plot.addPoints(zpos, tmp, Plot.CROSS);
@@ -198,15 +212,8 @@ public class Create_3D_calibration implements PlugIn
 			{
 				extrainfo.addValue("Width P"+r, xstd[r][s]);
 				extrainfo.addValue("Height P"+r, ystd[r][s]);
-				//extrainfo.addValue("Width minus Height P"+r, wmh[r][s]);
 			}
 		}
 		extrainfo.show("Particle extra information...");
-
-		//boolean save = IJ.showMessageWithCancel("Save calibration...", "Save calibration into file?");
-		//if (!save) return;
-		//ij.io.SaveDialog sv = new ij.io.SaveDialog("Save calibration file...", "AstigmatismCalibration", ".txt");
-		//java.lang.String filepath = sv.getDirectory()+sv.getFileName();
-		//io.saveTransform(filepath, small_zpos, small_xmystd, cal_xmystd);
 	}
 }

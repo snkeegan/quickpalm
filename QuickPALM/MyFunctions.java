@@ -14,18 +14,18 @@ class MyFunctions
 {
 	GaussianBlur gblur = new GaussianBlur();
 	//ResultsTable ptable = new ResultsTable(); // Particle table
-	ResultsTable ptable = Analyzer.getResultsTable();
+	ResultsTable ptable = Analyzer.getResultsTable(); // Particle table
 	ResultsTable dtable = new ResultsTable(); // Drift table
 	ResultsTable caltable = new ResultsTable(); // Astigmatism calibration table
-	ParticleSaver psave;
+	ParticleSaver psave; // Particle saver manager class
 	
 	double [] cal3d_z; // z positions
 	double [] cal3d_wmh; // width minus height
-	int cal3d_center;
+	int cal3d_center; // closest index to the center value of the cal3d_* arrays
 	
 	java.util.concurrent.locks.Lock ptable_lock = new java.util.concurrent.locks.ReentrantLock();
 
-	boolean debug = true;
+	boolean debug = false;
 	
 	void MyFunctions()
 	{
@@ -39,6 +39,8 @@ class MyFunctions
 		if (debug) IJ.log(txt);
 	}
 	
+	
+	/** Loads values from the calibration table into the cal3d_* arrays. */
 	void initialize3d()
 	{
 		cal3d_z = caltable.getColumnAsDoubles(0);
@@ -46,6 +48,14 @@ class MyFunctions
 		cal3d_center=(int) Math.round(cal3d_z.length/2);
 	}
 	
+	/** Given a calculated width-minus-height (wmh) converts this value into
+	 * the corresponding coordinate in Z by comparing against the loaded
+	 * Z-calibration table. Only used it the particle is disturbed by
+	 * astigmatism.
+	 *
+	 * @param wmh the width-minus-height of a particle
+	 * @return corresponding z-position value, will return 9999 if wmh is out of limits
+	*/
 	double getZ(double wmh)
 	{
 		int n = getClosest(wmh, cal3d_wmh, cal3d_center);
@@ -55,14 +65,19 @@ class MyFunctions
 		double x2 = (cal3d_wmh[n+1]+cal3d_wmh[n])/2;
 		double y1 = (cal3d_z[n-1]+cal3d_z[n])/2;
 		double y2 = (cal3d_z[n+1]+cal3d_z[n])/2;
-		//double x1 = cal3d_wmh[n-1];
-		//double x2 = cal3d_wmh[n+1];
-		//double y1 = cal3d_z[n-1];
-		//double y2 = cal3d_z[n+1];
 		
+		// linear interpolation between the two nearest values found on the
+		// Z-calibration table
 		return y1 + ((y2 - y1) / (x2 - x1))*(wmh - x1);
 	}
 	
+	/** Grabs a new image on an observed folder on the case of the analysis
+	 * being attached to the acquisition.
+	 *
+	 * @param dg dialog manager
+	 * @param frame frame index to search for on the folder
+	 * @return found image
+	*/
 	ImagePlus getNextImage(MyDialogs dg, int frame)
 	{
 		java.lang.String imname = ""+frame;
@@ -90,27 +105,11 @@ class MyFunctions
 		return imp;
 	}
 	
-	
-	void sizeGating(ImageProcessor ip, double spsize, double lpsize)
-	{
-		ImageProcessor lpip = ip.duplicate();
-		gblur.blur(ip, spsize);
-		gblur.blur(lpip, lpsize);
-		int v;
-		for (int i=0;i<ip.getWidth();i++)
-		{
-			for (int j=0;j<ip.getHeight(); j++)
-			{
-				v=ip.get(i, j)-lpip.get(i, j);
-			  if (v>=0)
-					ip.set(i, j, v);
-				else
-					ip.set(i, j, 0);
-			}
-		}
-	}
-	
-	
+	/** Particle finding method, will search the image for particles.
+	 * @param ip image to search for particles on
+	 * @param dg dialog manager
+	 * @param nframe the frame index corresponding to this image
+	*/
 	void detectParticles(ImageProcessor ip, MyDialogs dg, int nframe)
 	{
 		int i, j;
@@ -211,6 +210,12 @@ class MyFunctions
 		IJ.log("'OK'/'Not OK' Particles= "+ok_nparticles+"/"+notok_nparticles);
 	}
 	
+	/** Particle analysis method, called for each particle candidate found by
+	 * detectParticles.
+	 * @param ip image to search for particles on
+	 * @param dg dialog manager
+	 * @param nframe the frame index corresponding to this image
+	*/
 	boolean getParticle(ImageProcessor ip, boolean [][] mask, int [] maxs, MyDialogs dg, ResultsTable ptable, int nframe)
 	{
 		int roirad = (int) Math.round(dg.fwhm);
@@ -230,7 +235,7 @@ class MyFunctions
 		// skip perifery particles
 		if (xstart<0 || xend>=width || ystart<0 || yend>=height) 
 		{
-			//IJ.log("fail on perifery");
+			log("fail on perifery");
 			xstart = (int) (xmax-roirad/2);
 			ystart = (int) (ymax-roirad/2);
 			xend = (int) (xmax+1+roirad/2);
@@ -249,7 +254,7 @@ class MyFunctions
 			for (j=ystart;j<=yend;j++)
 				if (mask[i][j])
 				{
-					//IJ.log("fail on already analysed");
+					log("fail on already analysed");
 					xstart = (int) (xmax-roirad/2);
 					ystart = (int) (ymax-roirad/2);
 					xend = (int) (xmax+1+roirad/2);
@@ -350,7 +355,7 @@ class MyFunctions
 		// area filter
 		if (npixels<5 || ((xlstd+xrstd)*1.177>dg.fwhm) || ((ylstd+yrstd)*1.177>dg.fwhm))
 		{
-			//IJ.log("fail on size");
+			log("fail on size");
 			clearRegion(thrsh, ip, mask, xstart, xend, ystart, yend);
 			return false;
 		}
@@ -365,7 +370,7 @@ class MyFunctions
 		{
 			if (sym < dg.symmetry)
 			{
-				//IJ.log("fail on symmetry");
+				log("fail on 2D symmetry");
 				clearRegion(thrsh, ip, mask, xstart, xend, ystart, yend);
 				return false;
 			}
@@ -375,7 +380,7 @@ class MyFunctions
 		{
 			if (xsym<dg.symmetry || ysym<dg.symmetry)
 			{
-				//IJ.log("fail on symmetry");
+				log("fail on 3D symmetry");
 				clearRegion(thrsh, ip, mask, xstart, xend, ystart, yend);
 				return false;
 			}

@@ -1,3 +1,5 @@
+/** Main container to all dialogs within the plugin, dialogs */
+
 package QuickPALM;
 
 import ij.*;
@@ -403,9 +405,6 @@ class MyDialogs
 		
 		//--
 		
-		//double area = (roirad*2+1)*(roirad*2+1);
-		//minsize = area*gd.getNextNumber()/100;
-		//maxsize = area*gd.getNextNumber()/100;
 		symmetry = gd.getNextNumber()/100;
 		prefs.set("QuickPALM.symmetry", symmetry);
 		pthrsh = gd.getNextNumber()/100;

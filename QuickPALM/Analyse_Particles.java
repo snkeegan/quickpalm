@@ -11,6 +11,9 @@ import ij.measure.CurveFitter.*;
 import java.awt.*;
 import java.lang.*;
 
+/** This plugin detectes sub-diffraction particles in a sequence of images, it
+ * is the main plugin for the QuickPALM package.
+*/
 public class Analyse_Particles implements PlugIn 
 {
 	ImagePlus imp;
@@ -25,8 +28,7 @@ public class Analyse_Particles implements PlugIn
 		IJ.register(Analyse_Particles.class);
 		if (!dg.analyseParticles(f)) return;
 		
-		// Erase particle table
-		f.ptable.reset();
+		f.ptable.reset(); // erase particle table
 		
 		if (dg.is3d)
 		{
@@ -41,7 +43,7 @@ public class Analyse_Particles implements PlugIn
 			imp=f.getNextImage(dg, 0);
 			if (imp==null)
 			{
-				IJ.error("Could not find image following given pattern");
+				IJ.error("could not find image following given pattern");
 			    return;
 			}
 		}
@@ -55,19 +57,15 @@ public class Analyse_Particles implements PlugIn
 			}
 			else if (imp.getType() != ImagePlus.GRAY8 && imp.getType() != ImagePlus.GRAY16 ) 
 			{
-			    // In order to support 32bit images, pict[] must be changed to float[], and  getPixel(x, y); requires a Float.intBitsToFloat() conversion
 			    IJ.error("8 or 16 bit greyscale image required");
 			    return;
 			}
 		}
 	
 		ReconstructionViewer viewer = new ReconstructionViewer(imp.getShortTitle()+" Reconstruction", imp.getWidth(), imp.getHeight(), dg, f);
-		ViewerUpdate vUpdate; //= new ViewerUpdate();
-		ViewerUpdateShort vUpdateShort; //= new ViewerUpdateShort();
-		//int nslices = imp.getStackSize();
+		ViewerUpdate vUpdate;
+		ViewerUpdateShort vUpdateShort;
 		
-		//ProcessFrame [] threads = new ProcessFrame[Runtime.getRuntime().availableProcessors()*2];
-		//ProcessFrame [] threads = new ProcessFrame[50];
 		ProcessFrame [] threads = new ProcessFrame[dg.threads];
 		int freeThread=-1;
 		
@@ -79,7 +77,6 @@ public class Analyse_Particles implements PlugIn
 		int s=0;
 		boolean ok = true;
 		
-		//f.ptable.show("Particles table");
 		while (ok)
 		{
 			if (dg.attach)
@@ -93,7 +90,6 @@ public class Analyse_Particles implements PlugIn
 				if (s>=imp.getStackSize()) ok=false;
 				else
 				{
-					//imp.setSliceWithoutUpdate(s+1);
 					imp.setSlice(s+1);
 					ip=imp.getProcessor().duplicate();
 				}
@@ -141,26 +137,20 @@ public class Analyse_Particles implements PlugIn
 				{
 					ij.IJ.showStatus("Processing at "+time_took/dg.viewer_update+" ms/frame "+(f.ptable.getCounter()-nparticles)/dg.viewer_update+" part/frame, detected "+nparticles+" particles");
 					nparticles=f.ptable.getCounter();
-					//f.ptable.updateResults();
 					time_took=0;
 					if (dg.viewer_accumulate==0)
 					{
-						//try {vUpdate.join();}
-						//catch (Exception e) {IJ.error(""+e);}
 						vUpdate = new ViewerUpdate();
 						vUpdate.mysetup(viewer);
 						vUpdate.start();
 					}
 					else
 					{
-						//try {vUpdateShort.join();}
-						//catch (Exception e) {IJ.error(""+e);}
 						vUpdateShort = new ViewerUpdateShort();
 						vUpdateShort.mysetup(viewer, Math.round(s+1-dg.viewer_accumulate/2), Math.round(s+1+dg.viewer_accumulate/2));
 						vUpdateShort.start();
 					}
 				}
-				//if (s%100000==0) f.ptable.show("Results");
 			}
 			s++;
 		}
@@ -209,52 +199,46 @@ class ProcessFrame extends Thread
 	
 	public void run()
 	{
-		//f.ptable.updateResults();
-		//this.f.sizeGating(this.ip, this.dg.spsize, this.dg.lpsize);
 		this.f.detectParticles(this.ip, this.dg, this.frame);
 	}
 }
 
+/** Threaded call to the viewer.update method - used to refresh the reconstruction
+ * viewer to show the newly detected particles.
+*/
 class ViewerUpdate extends Thread
 {
 	private ReconstructionViewer viewer;
-	//private java.util.concurrent.locks.Lock lock = new java.util.concurrent.locks.ReentrantLock();
 	
 	public void mysetup(ReconstructionViewer viewer)
 	{
-		//this.lock.lock();
 		this.viewer=viewer;
-		//this.lock.unlock();
 	}
 	
 	public void run()
 	{
-		//this.lock.lock();
 		this.viewer.update();
-		//this.lock.unlock();
 	}
 }
 
+/** Threaded call to the viewer.updateShort method - used to update the reconstruction
+ * viewer in order to show the particles detected between the given frame range.
+*/
 class ViewerUpdateShort extends Thread
 {
 	private ReconstructionViewer viewer;
 	private int start;
 	private int stop;
-	//private java.util.concurrent.locks.Lock lock = new java.util.concurrent.locks.ReentrantLock();
 	
 	public void mysetup(ReconstructionViewer viewer, int start, int stop)
 	{
-		//this.lock.lock();
 		this.viewer=viewer;
 		this.start=start;
 		this.stop=stop;
-		//this.lock.unlock();
 	}
 	
 	public void run()
 	{
-		//this.lock.lock();
 		this.viewer.updateShort(this.start, this.stop);
-		//this.lock.unlock();
 	}
 }

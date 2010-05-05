@@ -35,6 +35,13 @@ class ReconstructionViewer
 	
 	int nframes = 0;
 	
+	/** Class constructer used on the online rendering mode.
+	 * @param title name for the rendering window
+	 * @param width original image width
+	 * @param height original image height
+	 * @param dg dialog manager
+	 * @param f functions manager
+	*/
 	ReconstructionViewer(java.lang.String title, int width, int height, MyDialogs dg, MyFunctions f)
 	{
 		settings = dg;
@@ -54,8 +61,12 @@ class ReconstructionViewer
 		}
 	}
 	
+	/** Class constructer used on the offline rendering mode.
+	 * @param title name for the rendering window
+	 * @param dg dialog manager
+	 * @param f_ functions manager
+	*/
 	ReconstructionViewer(java.lang.String title, MyDialogs dg, MyFunctions f_)
-	// used only on off-line mode
 	{
 		settings = dg;
 		table = f_.ptable;
@@ -106,6 +117,12 @@ class ReconstructionViewer
 			calculateColorBar();
 	}
 	
+	/** Main reconstruction drawing function used by the "Reconstruct Dataset" plugin.
+	 * @param fstart show only particle after this frame
+	 * @param fstop show only particle before this frame
+	 * @param zstart show only particles bellow this z-position
+	 * @param zstop show only particles above this z-position
+	*/
 	void draw(int fstart, int fstop, double zstart, double zstop)
 	{		
 
@@ -169,11 +186,12 @@ class ReconstructionViewer
 			}
 		}
 		if (settings.viewer_doConvolve) gblur.blur(ip, (settings.viewer_fwhm/2.354)/settings.viewer_tpixelsize);
-		imp.draw();
+		imp.updateAndDraw();
 		//if (imp.isVisible())
 		//	IJ.run(imp, "Enhance Contrast", "saturated=0.5");		
 	}
 	
+	/** Calculates a color bar to guide users on the position of each particle in Z.*/
 	ImagePlus calculateColorBar()
 	{
 		int border = 20;
@@ -192,7 +210,7 @@ class ReconstructionViewer
 				ipbar.putPixel(m,n+border,c);
 		}
 		
-		impbar.draw();
+		impbar.updateAndDraw();
 		impbar.show();
 		
 		IJ.runMacro("setFont(\"SansSerif\", 18, \" antialiased\");");
@@ -205,17 +223,17 @@ class ReconstructionViewer
 		IJ.runMacro("drawString(\"  "+Math.round(minZ+(maxZ-minZ)*5/6)+"\", "+12+", "+(510*5/6+border+6)+");");
 		IJ.runMacro("drawString(\"> "+Math.round(minZ+(maxZ-minZ)*6/6)+"\", "+12+", "+(510*6/6+border+6)+");");
 		
-		//ij.gui.TextRoi mytxt = new ij.gui.TextRoi(12, 10, "<"+minZ);
-		//mytxt.setBackgroundColor(java.awt.Color.WHITE);
-		//mytxt.drawPixels(ipbar);
-		//mytxt.setFont("SansSerif", 18, 0, true); 
-
 		return impbar;
 	}
 	
+	/** Calculates the color for a particle based on its intensity and position in Z.
+	 * @param s particle intensity
+	 * @param z particle position in z
+	 * @return particle color as RGB values
+	*/
 	int [] calculateColor(double s, double z)
 	{
-		double vs = ((s-min)/(max-min))*(1+settings.saturation); // allow 50% saturation
+		double vs = ((s-min)/(max-min))*(1+settings.saturation); // allow some saturation
 		double vz = ((z-minZ)/(maxZ-minZ));
 		int [] c = new int [3];
 		
@@ -231,10 +249,10 @@ class ReconstructionViewer
 		c[1] = (c[1]>255)?255:c[1];
 		c[2] = (c[2]>255)?255:c[2];
 		
-		//IJ.log("R="+c[0]+" G="+c[1]+" B="+c[2]);
 		return c;
 	}
 
+	/** Updates the reconstruction viewer with the lattest acquired particles. */
 	void update()
 	{
 		if (!settings.view) return;
@@ -244,14 +262,36 @@ class ReconstructionViewer
 		position = new_p;		
 	}
 
+	/** Updates the reconstruction viewer by showing the new particles found between
+	 * the given indices.
+	 * @param start first particle to be updated from the table
+	 * @param stop last particle to be updated from the table
+	*/
 	void update(int start, int stop)
 	{
+		// updated May 5th - instead of loading the full columns as arrays, we only grab the needed values, should increase processing speed
 		if (!settings.view) return;
+		
+		int nresults = table.getCounter();
+
+		start=(start<0)?0:start;
+		stop=(stop>nresults)?(nresults-1):stop;
+
+		s = new double [stop-start+1];
+		x = new double [stop-start+1];
+		y = new double [stop-start+1];
+		z = new double [stop-start+1];
+		
+		int index;
 		functions.ptable_lock.lock();
-		s = table.getColumnAsDoubles(0);
-		x = table.getColumnAsDoubles(1);
-		y = table.getColumnAsDoubles(2);
-		z = table.getColumnAsDoubles(5);
+		for (int n=start; n<=stop; n++)
+		{
+			index = n-start;
+			s[index] = table.getValueAsDouble(0, n);
+			x[index] = table.getValueAsDouble(1, n);
+			y[index] = table.getValueAsDouble(2, n);
+			z[index] = table.getValueAsDouble(5, n);
+		}
 		functions.ptable_lock.unlock();
 		
 		boolean newMax=false;
@@ -259,8 +299,8 @@ class ReconstructionViewer
 		boolean newMaxZ=false;
 		boolean newMinZ=false;
 		
-		// check if there is a new maximum value
-		for (int n=start;n<=stop;n++)
+		// check if there is a new max/min value
+		for (int n=0;n<=(stop-start);n++)
 		{
 			if (s[n]>max)
 			{
@@ -287,17 +327,15 @@ class ReconstructionViewer
 		
 		if (newMax || newMinZ || newMaxZ || newMin)
 		{
-			start=0;
 			clear();
+			update(0, stop); // if a new max/min value is found we need to reupdate the full image
+			return;
 		}
 		
 		int v, xmag, ymag;
-		start=(start<0)?0:start;
-		stop=(stop>s.length)?s.length:stop;
-
 		int [] old_rgb = new int [3];
 		int [] new_rgb = new int [3];
-		for (int n=start;n<=stop;n++)
+		for (int n=0;n<=(stop-start);n++)
 		{
 			xmag=(int) Math.round(x[n]*settings.magn);
 			ymag=(int) Math.round(y[n]*settings.magn);
@@ -306,9 +344,14 @@ class ReconstructionViewer
 			if ((old_rgb[0]+old_rgb[1]+old_rgb[2])<(new_rgb[0]+new_rgb[1]+new_rgb[2]))
 				ip.putPixel(xmag, ymag, new_rgb);
 		}
-		imp.draw();
+		imp.updateAndDraw();;
 	}
 	
+	/** Updates the reconstruction viewer by showing particles found between
+	 * fstart and fstop.
+	 * @param fstart start position of the frame range
+	 * @param fstop stop position of the frame range
+	*/
 	void updateShort(int fstart, int fstop)
 	{
 		if (!settings.view) return;
@@ -336,9 +379,10 @@ class ReconstructionViewer
 					ip.putPixel(xmag, ymag, new_rgb);
 			}
 		}
-		imp.draw();
+		imp.updateAndDraw();
 	}
 	
+	/** Cleans the reconstruction viewer image. */
 	void clear()
 	{
 		if (!settings.view) return;

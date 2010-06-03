@@ -21,7 +21,7 @@ public class Create_3D_calibration implements PlugIn
 	ImageProcessor ip;
 	
 	MyDialogs dg = new MyDialogs();
-	MyFunctions f = new MyFunctions();
+	MyFunctions fx = new MyFunctions();
 	MyIO io = new MyIO();
 	ResultsTable res = new ResultsTable();
 	ResultsTable extrainfo = new ResultsTable();
@@ -60,8 +60,8 @@ public class Create_3D_calibration implements PlugIn
 			
 			// build new frequency gatted image	
 			ImageProcessor lpip = ip.duplicate();
-			f.gblur.blur(ip, 0.5);
-			f.gblur.blur(lpip, dg.fwhm*2);
+			fx.gblur.blur(ip, 0.5);
+			fx.gblur.blur(lpip, dg.fwhm*2);
 			int v;
 			for (int i=0;i<ip.getWidth();i++)
 			{
@@ -77,7 +77,7 @@ public class Create_3D_calibration implements PlugIn
 			for (int r=0;r<dg.rois.length;r++)
 			{
 				roi = dg.rois[r].getBoundingRect();
-				results = f.getParticleForCalibration(ip, dg, roi.x, roi.x+roi.width, roi.y, roi.y+roi.height);
+				results = fx.getParticleForCalibration(ip, dg, roi.x, roi.x+roi.width, roi.y, roi.y+roi.height);
 				sgnl[r][s-1]=results[0];
 				xstd[r][s-1]=results[3]+results[4];
 				ystd[r][s-1]=results[5]+results[6];
@@ -121,7 +121,7 @@ public class Create_3D_calibration implements PlugIn
 			}
 			mean_wmh[s-1]/=sSum;
 		}
-		mean_wmh=f.movingMean(mean_wmh, dg.window);
+		mean_wmh=fx.movingMean(mean_wmh, dg.window);
 		
 		// calculate the Z-position
 		double [] zpos = new double[dg.nslices];
@@ -132,7 +132,7 @@ public class Create_3D_calibration implements PlugIn
 		if (dg.model!=dg.models[0])
 		{
 			CurveFitter cf = new CurveFitter(zpos, mean_wmh);
-			 if (dg.model==dg.models[1])
+			if (dg.model==dg.models[1])
 				cf.doFit(CurveFitter.STRAIGHT_LINE);
 			else if (dg.model==dg.models[2])
 				cf.doFit(CurveFitter.POLY2);
@@ -148,13 +148,13 @@ public class Create_3D_calibration implements PlugIn
 		}
 		
 		// realign with zero
-		index_z0 = f.getClosest(0, cal_mean_wmh, 0);
+		index_z0 = fx.getClosest(0, cal_mean_wmh, 0);
 		for (int s=1;s<=dg.nslices;s++)
 			zpos[s-1]=((s-index_z0)*dg.cal_z);
 		
 		// cut down inflexions
-		int pmax = f.argmax(cal_mean_wmh);
-		int pmin = f.argmin(cal_mean_wmh);
+		int pmax = fx.argmax(cal_mean_wmh);
+		int pmin = fx.argmin(cal_mean_wmh);
 		
 		int start = (pmax<pmin)?pmax:pmin;
 		int stop = (pmax<pmin)?pmin:pmax;
@@ -202,6 +202,41 @@ public class Create_3D_calibration implements PlugIn
 		}
 		res.show("Astigmatism calibration");
 
+		// Calculate the resolution based on the displacement between the model
+		// and estimated bead positions.
+		if (dg.part_divergence)
+		{
+			double [] mean_resol = new double[zpos.length];
+			double [] std_resol  = new double[zpos.length];
+			fx.cal3d_z = zpos;
+			fx.cal3d_wmh = cal_mean_wmh;
+			double zpart;
+			double count = 0;
+			for (int s=0;s<zpos.length;s++)
+			{
+				mean_resol[s]=0;
+				std_resol[s] =0;
+				for (int r=0;r<dg.rois.length;r++)
+				{
+					count = 0;
+					zpart = fx.getZ(wmh[r][s]);
+					if (zpart<9999)
+					{
+						mean_resol[s]+= Math.abs(zpart-zpos[s]); 
+						std_resol[s] += Math.pow(zpart-zpos[s], 2);
+						count++;
+					}
+				}
+				mean_resol[s]/=count;
+				std_resol[s] = Math.sqrt(std_resol[s]/count);
+				if (std_resol[s]>1000) std_resol[s]=0;
+				if (mean_resol[s]>1000) mean_resol[s]=0;
+				//IJ.log("Z="+zpos[s]+" std="+std_resol[s]);
+			}
+			plot = new Plot("Particle divergence against model", "Z-position (nm)", "Stddev of bead positions vs. model (nm)", zpos, std_resol);
+			plot.show();
+		}
+		
 		if (!dg.part_extrainfo)
 			return;
 

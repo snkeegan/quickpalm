@@ -53,6 +53,7 @@ class MyDialogs
 	// used on calib
 	java.lang.String model;
 	java.lang.String [] models = new java.lang.String[5]; // used for the calibration
+	boolean part_divergence;
 	boolean part_extrainfo;
 	
 	// used on is3d
@@ -216,18 +217,19 @@ class MyDialogs
 		models[4]="4th degree polynomial";
 
 		GenericDialog gd = new GenericDialog("3D PALM calibration");
-		gd.addNumericField("Maximum FWHM (in px)", prefs.get("QuickPALM.fwhm", 20), 0);
+		gd.addNumericField("Maximum FWHM (in px)", prefs.get("QuickPALM.3Dcal_fwhm", 20), 0);
 		gd.addNumericField("Particle local threshold (% maximum intensity)", prefs.get("QuickPALM.pthrsh", 20), 0);
        	gd.addNumericField("Z-spacing (nm)", prefs.get("QuickPALM.z-step", 10), 2);
 		gd.addNumericField("Calibration Z-smoothing (radius)", prefs.get("QuickPALM.window", 1), 0);
 		gd.addChoice("Model", models, prefs.get("QuickPALM.model", models[3]));
-		gd.addCheckbox("Show extra particle info", false);
+		gd.addCheckbox("Show divergence of bead positions against model", prefs.get("QuickPALM.3Dcal_showDivergence", false));
+		gd.addCheckbox("Show extra particle info", prefs.get("QuickPALM.3Dcal_showExtraInfo", false));
 		gd.addMessage("\n\nDon't forget to save the table in the end...");
 		gd.showDialog();
 		if (gd.wasCanceled())
             return false;
 		fwhm = gd.getNextNumber();
-		prefs.set("QuickPALM.fwhm", fwhm);
+		prefs.set("QuickPALM.QuickPALM.3Dcal_fwhm", fwhm);
 		pthrsh = gd.getNextNumber()/100;
 		prefs.set("QuickPALM.pthrsh", pthrsh*100);
 		cal_z = gd.getNextNumber();
@@ -236,7 +238,10 @@ class MyDialogs
 		prefs.set("QuickPALM.window", window);
 		model = gd.getNextChoice();
 		prefs.set("QuickPALM.model", model);
+		part_divergence = gd.getNextBoolean();
+		prefs.set("QuickPALM.3Dcal_showDivergence", part_divergence);
 		part_extrainfo = gd.getNextBoolean();
+		prefs.set("QuickPALM.3Dcal_showExtraInfo", part_extrainfo);
 		return true;
 	}
 	

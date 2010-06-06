@@ -1,4 +1,4 @@
-current_version = 1.2;
+current_version = 1.1;
 
 url = "http://code.google.com/p/quickpalm/downloads/list";
 prefix = "QuickPALM%20";
